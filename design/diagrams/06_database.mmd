@@ -1,0 +1,133 @@
+erDiagram
+  USERS ||--o{ SURVEYS : "creates"
+  USERS ||--o{ QUESTIONNAIRE_VERSIONS : "uploads / approves"
+  SURVEYS ||--o{ QUESTIONNAIRE_VERSIONS : "has"
+  SURVEYS |o--o| QUESTIONNAIRE_VERSIONS : "current version"
+  QUESTIONNAIRE_VERSIONS ||--o{ QUESTIONS : "contains"
+  QUESTIONS ||--o{ OPTIONS : "has"
+  QUESTIONS ||--o{ MATRIX_ROWS : "has"
+  QUESTIONNAIRE_VERSIONS ||--o{ QUOTAS : "defines"
+  QUOTAS ||--|{ QUOTA_CONDITIONS : "matches on"
+  SURVEYS ||--o{ RESPONSES : "receives"
+  QUESTIONNAIRE_VERSIONS ||--o{ RESPONSES : "answered on"
+  RESPONDENTS ||--o{ RESPONSES : "gives"
+  RESPONSES ||--o{ ANSWERS : "contains"
+  QUESTIONS ||--o{ ANSWERS : "answered in"
+  RESPONSES ||--o{ TERMINATION_REASONS : "records"
+  QUESTIONS |o--o{ TERMINATION_REASONS : "caused by"
+
+  USERS {
+    int id PK
+    string email UK
+    string name
+    string password_hash
+    string role "admin or researcher"
+    datetime created_at
+  }
+  SURVEYS {
+    int id PK
+    string slug UK "survey id from the file"
+    string title
+    string status "draft, live, closed"
+    int target "total completes wanted"
+    datetime deadline_at "default go-live + 15 days"
+    int current_version_id FK
+    string closed_reason "target_reached, deadline, admin"
+    datetime opened_at
+    datetime closed_at
+    int created_by FK
+  }
+  QUESTIONNAIRE_VERSIONS {
+    int id PK
+    int survey_id FK
+    int version_no "null while draft"
+    string status "draft, approved"
+    text source_text "raw .txt as uploaded"
+    string source_hash
+    json issues "checker errors and warnings"
+    int screener_end_position
+    int uploaded_by FK
+    int approved_by FK
+    datetime uploaded_at
+    datetime approved_at
+  }
+  QUESTIONS {
+    int id PK
+    int version_id FK
+    string qid "q1, q2 ..."
+    int position
+    string type
+    text text "may contain piping"
+    bool required
+    string show_if "q12=Yes AND q4=Mumbai"
+    string terminate_on
+    string terminate_reason
+    bool terminate_silent
+    string options_from_qid
+    bool shuffle
+    json limits "min, max, minlength, format, labels"
+    int source_line
+  }
+  OPTIONS {
+    int id PK
+    int question_id FK
+    int position
+    string label
+    bool fixed
+    bool is_other
+    bool exclusive
+    string skip_to_qid
+  }
+  MATRIX_ROWS {
+    int id PK
+    int question_id FK
+    int position
+    string label
+  }
+  QUOTAS {
+    int id PK
+    int version_id FK
+    string label "Mumbai"
+    int target
+  }
+  QUOTA_CONDITIONS {
+    int id PK
+    int quota_id FK
+    string question_qid
+    string value
+  }
+  RESPONDENTS {
+    int id PK
+    string phone UK "identity for cool-off"
+    datetime created_at
+  }
+  RESPONSES {
+    int id PK
+    string token UK "the unique link"
+    int survey_id FK
+    int version_id FK
+    int respondent_id FK "null for test runs"
+    bool is_test
+    string status "in_progress, completed, terminated"
+    string termination_summary "reasons joined by pipe"
+    json display_order "shuffled options and rows seen"
+    datetime started_at
+    datetime last_answered_at
+    datetime finished_at
+  }
+  ANSWERS {
+    int id PK
+    int response_id FK
+    int question_id FK
+    json value "text, number, list or row map"
+    string other_text
+    datetime answered_at
+    datetime updated_at
+  }
+  TERMINATION_REASONS {
+    int id PK
+    int response_id FK
+    int question_id FK "null for quota-full at end"
+    string reason
+    bool silent
+  }

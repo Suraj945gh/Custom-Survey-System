@@ -1,0 +1,22 @@
+flowchart TD
+  A["Researcher uploads .txt<br/>or pastes it into the editor"] --> B{"Checker"}
+  B -- "errors found" --> C["Draft + error list<br/>line numbers · did-you-mean hints<br/>Approve button disabled"]
+  C --> D["Fix in the in-app editor<br/>or upload a corrected file<br/>(replaces the draft, no new version)"]
+  D --> B
+  B -- "no errors" --> E["Draft ready<br/>(no version number yet)"]
+  E --> F["Preview / test mode<br/>test answers kept apart, never counted"]
+  F -- "wants a change" --> D
+  F --> G{"Admin approves?"}
+  G -- "no, send back" --> D
+  G -- "yes" --> H["Frozen as next version<br/>v1, then v2, v3 …"]
+  H --> I{"Survey status"}
+  I -- "Draft (first approval)" --> J["Admin sets deadline<br/>default = today + 15 days<br/>then Go live"]
+  I -- "already Live" --> K["New version becomes current<br/>new respondents get it ·<br/>people mid-way stay on their version"]
+  J --> L(["LIVE"])
+  K --> L
+  L -. "researcher uploads a changed file<br/>(same survey id)" .-> D
+  L --> M{"Close trigger"}
+  M -- "total target reached" --> N(["CLOSED"])
+  M -- "deadline passed" --> N
+  M -- "admin closes it" --> N
+  N --> O["Dashboard and export<br/>stay available"]
