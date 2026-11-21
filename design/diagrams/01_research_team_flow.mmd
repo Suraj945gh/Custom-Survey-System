@@ -1,0 +1,20 @@
+---
+config:
+  look: handDrawn
+  theme: neutral
+---
+flowchart TD
+  A["Write the questionnaire<br/>as a .txt file"] --> B["Upload it in the app"]
+  B --> C{"Is the file OK?"}
+  C -- "No" --> D["See every error with its line number<br/>fix it in the app's editor"]
+  D --> C
+  C -- "Yes" --> E["Preview it like a respondent<br/>(test answers are not counted)"]
+  E --> F["Admin approves it<br/>→ saved and locked as Version 1"]
+  F --> G["Admin makes it Live<br/>deadline = 15 days by default"]
+  G --> H["Share the survey link<br/>on social media"]
+  G --> I["Watch the live dashboard"]
+  I --> J{"Target reached, deadline over,<br/>or admin closes it?"}
+  J -- "No" --> I
+  J -- "Yes" --> K["Survey closed"]
+  K --> L["Download results<br/>as CSV or Excel"]
+  G -. "file changed later" .-> M["New draft → admin approves<br/>→ Version 2"]

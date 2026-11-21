@@ -1,0 +1,18 @@
+---
+config:
+  look: handDrawn
+  theme: neutral
+---
+flowchart TD
+  A["Opens the survey link<br/>on their phone"] --> B["Types their phone number"]
+  B --> C{"Can they take part?"}
+  C -- "Survey is closed" --> X1["Survey closed<br/>(shows why)"]
+  C -- "Took a survey in<br/>the last 3 months" --> X2["Not eligible right now"]
+  C -- "Already finished<br/>this survey" --> X3["Already completed"]
+  C -- "Yes" --> D["Gets their own personal link"]
+  D --> E["Answers one question per screen<br/>each answer is saved instantly"]
+  E --> F{"After each answer"}
+  F -- "next question" --> E
+  F -- "failed a screening rule<br/>or quota is full" --> X4["Not eligible<br/>(reason saved)"]
+  F -- "all questions done" --> X5["Thank you!<br/>Completed"]
+  E -. "phone dies, opens link again" .-> E
