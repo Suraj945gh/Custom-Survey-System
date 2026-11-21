@@ -4,7 +4,7 @@ Day 2 design for the Custom Survey System.
 
 | File | What it shows |
 |---|---|
-| [user_flow.md](user_flow.md) | How the research team and the respondent move through the app |
+| [user_flow.md](user_flow.md) | How the research team and the respondent move through the app, and what happens after each answer |
 | [database.md](database.md) | The tables and how they connect |
 | [diagrams/](diagrams/) | Source of each diagram (Mermaid) |
 

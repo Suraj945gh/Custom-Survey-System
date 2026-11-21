@@ -11,8 +11,24 @@ There are two kinds of people in this app:
 ```mermaid
 ---
 config:
-  look: handDrawn
-  theme: neutral
+  theme: base
+  themeVariables:
+    fontFamily: "Segoe UI, Helvetica, Arial, sans-serif"
+    primaryColor: "#ffffff"
+    secondaryColor: "#ffffff"
+    tertiaryColor: "#ffffff"
+    mainBkg: "#ffffff"
+    nodeBorder: "#000000"
+    primaryBorderColor: "#000000"
+    primaryTextColor: "#000000"
+    nodeTextColor: "#000000"
+    textColor: "#000000"
+    lineColor: "#888888"
+    edgeLabelBackground: "#ffffff"
+    relationLabelBackground: "#ffffff"
+    relationLabelColor: "#000000"
+    attributeBackgroundColorOdd: "#ffffff"
+    attributeBackgroundColorEven: "#ffffff"
 ---
 flowchart TD
   A["Write the questionnaire<br/>as a .txt file"] --> B["Upload it in the app"]
@@ -40,8 +56,24 @@ updates the same draft.
 ```mermaid
 ---
 config:
-  look: handDrawn
-  theme: neutral
+  theme: base
+  themeVariables:
+    fontFamily: "Segoe UI, Helvetica, Arial, sans-serif"
+    primaryColor: "#ffffff"
+    secondaryColor: "#ffffff"
+    tertiaryColor: "#ffffff"
+    mainBkg: "#ffffff"
+    nodeBorder: "#000000"
+    primaryBorderColor: "#000000"
+    primaryTextColor: "#000000"
+    nodeTextColor: "#000000"
+    textColor: "#000000"
+    lineColor: "#888888"
+    edgeLabelBackground: "#ffffff"
+    relationLabelBackground: "#ffffff"
+    relationLabelColor: "#000000"
+    attributeBackgroundColorOdd: "#ffffff"
+    attributeBackgroundColorEven: "#ffffff"
 ---
 flowchart TD
   A["Opens the survey link<br/>on their phone"] --> B["Types their phone number"]
@@ -58,12 +90,49 @@ flowchart TD
   E -. "phone dies, opens link again" .-> E
 ```
 
-What the app checks after every answer:
-
-1. **Skip rules and show-if**: which question comes next.
-2. **Piping**: put an earlier answer into the text ("How happy are you with your *Samsung* phone?").
-3. **Screening rules and quotas**: during the first few screening questions, every failed rule is
-   noted. When screening ends, the person is stopped with all the reasons together
-   (`q4: City not in scope | q5: Not a smartphone user`). Consent "No" stops them at once.
-
 A response is always **In progress**, **Completed** or **Terminated**.
+
+## 3. What happens after each answer
+
+```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    fontFamily: "Segoe UI, Helvetica, Arial, sans-serif"
+    primaryColor: "#ffffff"
+    secondaryColor: "#ffffff"
+    tertiaryColor: "#ffffff"
+    mainBkg: "#ffffff"
+    nodeBorder: "#000000"
+    primaryBorderColor: "#000000"
+    primaryTextColor: "#000000"
+    nodeTextColor: "#000000"
+    textColor: "#000000"
+    lineColor: "#888888"
+    edgeLabelBackground: "#ffffff"
+    relationLabelBackground: "#ffffff"
+    relationLabelColor: "#000000"
+    attributeBackgroundColorOdd: "#ffffff"
+    attributeBackgroundColorEven: "#ffffff"
+---
+flowchart TD
+  A["Respondent answers a question"] --> B{"Is the answer valid?<br/>required, min/max, format"}
+  B -- "No" --> B1["Show a message<br/>on the same screen"]
+  B -- "Yes" --> C["Save the answer right away"]
+  C --> D{"Consent = No?"}
+  D -- "Yes" --> T1["End: Not eligible"]
+  D -- "No" --> E["Note any failed screening rule<br/>or full quota"]
+  E --> F["Pick the next question<br/>using skip-to and show-if"]
+  F --> G{"Screening over and<br/>a rule failed?"}
+  G -- "Yes" --> T2["End: Not eligible<br/>all reasons saved together"]
+  G -- "No" --> H{"Any question left?"}
+  H -- "Yes" --> I["Show it, with piping<br/>e.g. your Samsung phone"]
+  H -- "No" --> J["End: Completed"]
+```
+
+- **Skip-to and show-if** decide which question comes next.
+- **Piping** puts an earlier answer into the text ("How happy are you with your *Samsung* phone?").
+- **Screening:** while the person is in the first few screening questions, every failed rule is
+  noted. When screening ends, they are stopped with all the reasons together
+  (`q4: City not in scope | q5: Not a smartphone user`). Consent "No" stops them at once.

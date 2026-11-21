@@ -3,8 +3,24 @@
 ```mermaid
 ---
 config:
-  look: handDrawn
-  theme: neutral
+  theme: base
+  themeVariables:
+    fontFamily: "Segoe UI, Helvetica, Arial, sans-serif"
+    primaryColor: "#ffffff"
+    secondaryColor: "#ffffff"
+    tertiaryColor: "#ffffff"
+    mainBkg: "#ffffff"
+    nodeBorder: "#000000"
+    primaryBorderColor: "#000000"
+    primaryTextColor: "#000000"
+    nodeTextColor: "#000000"
+    textColor: "#000000"
+    lineColor: "#888888"
+    edgeLabelBackground: "#ffffff"
+    relationLabelBackground: "#ffffff"
+    relationLabelColor: "#000000"
+    attributeBackgroundColorOdd: "#ffffff"
+    attributeBackgroundColorEven: "#ffffff"
 ---
 erDiagram
   USERS ||--o{ SURVEYS : "creates"

@@ -1,0 +1,34 @@
+---
+config:
+  theme: base
+  themeVariables:
+    fontFamily: "Segoe UI, Helvetica, Arial, sans-serif"
+    primaryColor: "#ffffff"
+    secondaryColor: "#ffffff"
+    tertiaryColor: "#ffffff"
+    mainBkg: "#ffffff"
+    nodeBorder: "#000000"
+    primaryBorderColor: "#000000"
+    primaryTextColor: "#000000"
+    nodeTextColor: "#000000"
+    textColor: "#000000"
+    lineColor: "#888888"
+    edgeLabelBackground: "#ffffff"
+    relationLabelBackground: "#ffffff"
+    relationLabelColor: "#000000"
+    attributeBackgroundColorOdd: "#ffffff"
+    attributeBackgroundColorEven: "#ffffff"
+---
+flowchart TD
+  A["Respondent answers a question"] --> B{"Is the answer valid?<br/>required, min/max, format"}
+  B -- "No" --> B1["Show a message<br/>on the same screen"]
+  B -- "Yes" --> C["Save the answer right away"]
+  C --> D{"Consent = No?"}
+  D -- "Yes" --> T1["End: Not eligible"]
+  D -- "No" --> E["Note any failed screening rule<br/>or full quota"]
+  E --> F["Pick the next question<br/>using skip-to and show-if"]
+  F --> G{"Screening over and<br/>a rule failed?"}
+  G -- "Yes" --> T2["End: Not eligible<br/>all reasons saved together"]
+  G -- "No" --> H{"Any question left?"}
+  H -- "Yes" --> I["Show it, with piping<br/>e.g. your Samsung phone"]
+  H -- "No" --> J["End: Completed"]
