@@ -4,6 +4,7 @@
 ---
 config:
   theme: base
+  fontSize: "12px"
   themeVariables:
     fontFamily: "Segoe UI, Helvetica, Arial, sans-serif"
     primaryColor: "#ffffff"
