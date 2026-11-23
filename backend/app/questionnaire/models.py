@@ -160,5 +160,9 @@ class ParseResult:
         return [i for i in self.issues if i.severity == "error"]
 
     @property
+    def warnings(self) -> list[Issue]:
+        return [i for i in self.issues if i.severity == "warning"]
+
+    @property
     def ok(self) -> bool:
         return self.survey is not None and not self.errors
