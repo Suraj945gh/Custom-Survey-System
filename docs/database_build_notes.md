@@ -10,7 +10,7 @@ relations. They add the practical columns below. No table was added or removed.
 | surveys | `slug`, `created_by_id`, `created_at`, `live_at`, `closed_at`, `closed_reason` | `slug` is the `<survey id>` from the file, used to match a re-upload to its survey. `closed_reason` is `closed_by_team`, `deadline_passed` or `target_reached`, shown to respondents who reopen their link |
 | survey_versions | `file_name`, `created_by_id`, `created_at`, `updated_at`, `approved_at` | Who uploaded and approved what, and when |
 | questions | `position`, `required`, `rows`, `line` | Question order; matrix rows; the line in the file, so the screens can point back to it |
-| responses | `option_orders`, `started_at`, `updated_at`, `ended_at` | `option_orders` saves each respondent's shuffled option order, so Back and resume show the same order |
+| responses | `option_orders`, `silent_end`, `started_at`, `updated_at`, `ended_at` | `option_orders` saves each respondent's shuffled option order, so Back and resume show the same order. `silent_end` marks a `silent="true"` screen-out: the person sees a normal thank-you, and the reason is still saved |
 | answers | `answered_at` | Time of each answer (for the drop-off and speeder checks) |
 
 ## Rules enforced by the database
