@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Iterator, Union
+from typing import Callable, Iterator, Union
 
 ORDER_OPERATORS = {">", ">=", "<", "<="}
 
@@ -160,6 +160,15 @@ def parse_condition(text: str) -> Node:
             raise ConditionError("There is a ')' without a matching '('.")
         raise ConditionError("Two tests need AND or OR between them.")
     return node
+
+
+def evaluate(node: Node, test: Callable[[Compare], bool]) -> bool:
+    """Is the rule true? `test` decides each single comparison (the engine knows the answers)."""
+    if isinstance(node, Compare):
+        return test(node)
+    if isinstance(node, AllOf):
+        return all(evaluate(item, test) for item in node.items)
+    return any(evaluate(item, test) for item in node.items)
 
 
 def comparisons(node: Node) -> Iterator[Compare]:
