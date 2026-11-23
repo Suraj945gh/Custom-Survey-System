@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
+from app.services import respond as respond_service
 from app.services import surveys as service
 from app.tables import Survey, SurveyVersion, User
 
@@ -24,6 +25,8 @@ from .schemas import (
     QuotaOut,
     SurveyDetailOut,
     SurveyOut,
+    TestRunIn,
+    TestRunOut,
     TextIn,
     VersionDetailOut,
     VersionOut,
@@ -129,6 +132,14 @@ def update_draft(survey_id: int, body: TextIn, db: Session = Depends(get_db), us
 def discard_draft(survey_id: int, db: Session = Depends(get_db)):
     service.discard_draft(db, service.get_survey(db, survey_id))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/surveys/{survey_id}/test-runs", response_model=TestRunOut, status_code=status.HTTP_201_CREATED)
+def start_test_run(survey_id: int, body: TestRunIn | None = None, db: Session = Depends(get_db)):
+    """Preview / test mode. Answers are flagged as test and never counted.
+    Uses the draft if there is one, otherwise the current version (or say which with use_draft)."""
+    survey = service.get_survey(db, survey_id)
+    return respond_service.start_test_run(db, survey, body.use_draft if body else None)
 
 
 @router.get("/surveys/{survey_id}/versions/{version_no}", response_model=VersionDetailOut)

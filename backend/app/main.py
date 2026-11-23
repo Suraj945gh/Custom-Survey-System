@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import auth, surveys, users
+from app.api import auth, respond, surveys, users
 from app.api.schemas import IssueOut
 from app.config import settings
 from app.db import create_tables
@@ -37,7 +37,7 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(ServiceError)
     async def service_error(_request: Request, exc: ServiceError):
-        body: dict = {"detail": exc.message}
+        body: dict = {"detail": exc.message, **exc.extra}
         if exc.issues:
             body["issues"] = [IssueOut.of(i).model_dump() for i in exc.issues]
         return JSONResponse(status_code=exc.status, content=body)
@@ -49,6 +49,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(users.router)
     app.include_router(surveys.router)
+    app.include_router(respond.router)
     return app
 
 

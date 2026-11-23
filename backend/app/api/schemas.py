@@ -140,6 +140,16 @@ class GoLiveIn(BaseModel):
     deadline: datetime | None = None
 
 
+class TestRunIn(BaseModel):
+    use_draft: bool | None = None  # None = the draft if there is one, else the current version
+
+
+class TestRunOut(BaseModel):
+    token: str
+    version_no: int | None
+    is_draft: bool
+
+
 class QuestionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
