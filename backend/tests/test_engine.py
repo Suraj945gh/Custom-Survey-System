@@ -179,19 +179,19 @@ class TestTermination:
     def test_consent_no_ends_at_once(self, engine):
         person = Respondent(engine).answer("q0").answer("q1", "No")
         assert person.outcome.kind == "terminated"
-        assert [r.text for r in person.outcome.reasons] == ["Did not give consent"]
+        assert [r.text for r in person.outcome.reasons] == ["q1: Did not give consent"]
 
     def test_other_city_ends_after_screening_with_its_reason(self, engine):
         person = Respondent(engine).answers_in_order(("q0",), ("q1", "Yes"), ("q2", 30), ("q3", "Male"), ("q4", "Other city"))
         assert person.now == "q5"  # still in screening: keep collecting
         person.answer("q5", "Yes")
         assert person.outcome.kind == "terminated"
-        assert [r.text for r in person.outcome.reasons] == ["City not in scope"]
+        assert [r.text for r in person.outcome.reasons] == ["q4: City not in scope"]
 
     def test_two_failed_rules_are_both_saved(self, engine):
         person = screened(engine, q4="Other city", q5="No")
         assert person.outcome.kind == "terminated"
-        assert [r.text for r in person.outcome.reasons] == ["City not in scope", "Not a smartphone user"]
+        assert [r.text for r in person.outcome.reasons] == ["q4: City not in scope", "q5: Not a smartphone user"]
 
     def test_back_and_change_clears_a_failed_rule(self, engine):
         person = Respondent(engine).answers_in_order(("q0",), ("q1", "Yes"), ("q2", 30), ("q3", "Male"), ("q4", "Other city"))
@@ -204,12 +204,12 @@ class TestTermination:
         for step in SCREENING_OK:
             person.answer(*step)
         assert person.outcome.kind == "terminated"
-        assert [r.text for r in person.outcome.reasons] == ["Quota full: Male"]
+        assert [r.text for r in person.outcome.reasons] == ["q3: Quota full (Male)"]
 
     def test_full_quota_and_failed_rule_together(self, engine):
         person = Respondent(engine, full_quotas={("q4", "mumbai")})
         person.answers_in_order(("q0",), ("q1", "Yes"), ("q2", 30), ("q3", "Male"), ("q4", "Mumbai"), ("q5", "No"))
-        assert [r.text for r in person.outcome.reasons] == ["Not a smartphone user", "Quota full: Mumbai"]
+        assert [r.text for r in person.outcome.reasons] == ["q5: Not a smartphone user", "q4: Quota full (Mumbai)"]
 
     def test_quota_for_another_group_does_not_matter(self, engine):
         person = Respondent(engine, full_quotas={("q3", "female")})
@@ -222,7 +222,7 @@ class TestTermination:
                       '<question id="q2" type="text"><text>B</text></question>')
         outcome = Respondent(e).answer("q1", "No").outcome
         assert outcome.kind == "terminated" and outcome.silent
-        assert outcome.reasons[0].text == "Low fit"
+        assert outcome.reasons[0].text == "q1: Low fit"
 
 
 # --------------------------------------------------------------------------- shuffle

@@ -147,7 +147,7 @@ class Response(Base):
     version_id: Mapped[int] = mapped_column(ForeignKey("survey_versions.id", ondelete="CASCADE"), index=True)
     respondent_id: Mapped[int | None] = mapped_column(ForeignKey("respondents.id"))  # empty for test runs
     status: Mapped[str] = mapped_column(String(20), default=RESPONSE_IN_PROGRESS)
-    end_reasons: Mapped[str | None] = mapped_column(Text)  # "City not in scope | Quota full: Male"
+    end_reasons: Mapped[str | None] = mapped_column(Text)  # "q4: City not in scope | q3: Quota full (Male)"
     silent_end: Mapped[bool] = mapped_column(Boolean, default=False)  # screened out without being told
     is_test: Mapped[bool] = mapped_column(Boolean, default=False)
     option_orders: Mapped[dict[str, list[str]]] = mapped_column(JSON, default=dict)  # saved shuffle order

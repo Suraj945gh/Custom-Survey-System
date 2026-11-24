@@ -185,14 +185,14 @@ class TestEnding:
         assert "reasons" not in end or end["reasons"] is None  # real respondents don't see the reasons
         saved = response_of(db, person.token)
         assert saved.status == "terminated"
-        assert saved.end_reasons == "City not in scope | Not a smartphone user"
+        assert saved.end_reasons == "q4: City not in scope | q5: Not a smartphone user"
         assert person.screen()["end"] == "not_eligible"
 
     def test_consent_no(self, client, db, live):
         person = Person(client)
         person.answer("q0")
         assert person.answer("q1", "No")["end"] == "not_eligible"
-        assert response_of(db, person.token).end_reasons == "Did not give consent"
+        assert response_of(db, person.token).end_reasons == "q1: Did not give consent"
 
     def test_full_quota_ends_later_people(self, client, db, researcher, admin):
         make_live(db, TINY, researcher, admin)
@@ -200,7 +200,7 @@ class TestEnding:
         assert first.walk([("q1", "Male"), ("q2", "A")])["end"] == "completed"
         second = Person(client, "tiny", 2)
         assert second.answer("q1", "Male")["end"] == "not_eligible"
-        assert response_of(db, second.token).end_reasons == "Quota full: Male"
+        assert response_of(db, second.token).end_reasons == "q1: Quota full (Male)"
 
     def test_last_quota_place_is_checked_again_when_finishing(self, client, db, researcher, admin):
         make_live(db, TINY, researcher, admin)
@@ -209,7 +209,7 @@ class TestEnding:
         b.answer("q1", "Male")  # both passed screening while the quota was still open
         assert a.answer("q2", "A")["end"] == "completed"
         assert b.answer("q2", "B")["end"] == "not_eligible"  # final check at completion
-        assert response_of(db, b.token).end_reasons == "Quota full: Male"
+        assert response_of(db, b.token).end_reasons == "q1: Quota full (Male)"
 
     def test_target_reached_closes_the_survey(self, client, db, researcher, admin):
         make_live(db, TINY, researcher, admin)
@@ -287,7 +287,7 @@ class TestTestMode:
         tester = Person(client, token=client.post(f"/api/surveys/{survey['id']}/test-runs", headers=researcher_headers).json()["token"])
         tester.walk(FULL_PATH[:4])
         tester.answer("q4", "Other city")
-        assert tester.answer("q5", "Yes")["reasons"] == "City not in scope"
+        assert tester.answer("q5", "Yes")["reasons"] == "q4: City not in scope"
 
     def test_test_run_does_not_fill_quotas(self, client, db, researcher, admin, researcher_headers):
         survey = make_live(db, TINY, researcher, admin)

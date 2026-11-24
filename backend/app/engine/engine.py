@@ -16,7 +16,8 @@ Ending a response (decision D6):
     - consent "No" ends it at once
     - otherwise failed terminate-on rules and full quotas are collected while the respondent is
       in the SCREENING SECTION (up to the last question that has terminate-on or a quota).
-      When they move past it, the response ends with all reasons, joined by " | ".
+      When they move past it, the response ends with all reasons, joined by " | ",
+      each starting with its question id: "q4: City not in scope | q5: Not a smartphone user".
     - reasons are worked out again from all current answers each time, so Back + change clears them
 """
 
@@ -330,22 +331,22 @@ class SurveyEngine:
         for qid, given in active.items():
             q = self.by_id[qid]
             if self.consent_refused(q, given):
-                reasons.append(Reason(CONSENT_REFUSED))
+                reasons.append(Reason(f"{qid}: {CONSENT_REFUSED}"))
             rules = q.rules or {}
             wanted = rules.get("terminate_on")
             if wanted and matches(given.value, given.other_text, wanted):
-                reasons.append(Reason(rules.get("reason") or "Not eligible", bool(rules.get("silent"))))
+                reasons.append(Reason(f"{qid}: {rules.get('reason') or 'Not eligible'}", bool(rules.get("silent"))))
         for quota in self.quotas:
             given = active.get(quota.question_qid)
             if (quota.question_qid, norm(quota.value)) in full_quotas and given and matches(given.value, given.other_text, quota.value):
-                reasons.append(Reason(f"Quota full: {quota.value}"))
+                reasons.append(Reason(f"{quota.question_qid}: Quota full ({quota.value})"))
         return reasons
 
     def after_answer(self, qid: str, answers: dict[str, Given], full_quotas: set[tuple[str, str]]) -> Outcome:
         walk = self.walk(answers)
         q, given = self.by_id[qid], answers.get(qid)
         if given is not None and self.consent_refused(q, given):
-            return Outcome("terminated", reasons=[Reason(CONSENT_REFUSED)])
+            return Outcome("terminated", reasons=[Reason(f"{qid}: {CONSENT_REFUSED}")])
         next_qid = self.next_after(qid, walk)
         past_screening = next_qid is None or self.index[next_qid] > self.screening_end
         if past_screening:
