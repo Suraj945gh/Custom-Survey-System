@@ -1,7 +1,7 @@
 // /surveys/new  Upload or paste a questionnaire. It is checked live while you type, and every
 // problem links to its line. Saving creates a draft (or a new draft of the survey with the same id).
 import { useRef, useState, type DragEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, FileUp, Save, Sparkles } from "lucide-react";
 import { Button, Card, Notice, useToast, cx } from "../components/ui";
 import { ApiError, api } from "../lib/api";
@@ -23,9 +23,11 @@ export async function readTextFile(file: File): Promise<string> {
 export function NewSurveyPage() {
   const navigate = useNavigate();
   const toast = useToast();
+  // "Copy as new wave" on a survey page sends the renamed copy here
+  const copy = useLocation().state as { text?: string; copiedFrom?: string } | null;
   const editor = useRef<EditorHandle>(null);
   const picker = useRef<HTMLInputElement>(null);
-  const [text, setText] = useState("");
+  const [text, setText] = useState(copy?.text ?? "");
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [editing, setEditing] = useState(false); // "Paste or write instead" opens an empty editor
@@ -129,6 +131,12 @@ export function NewSurveyPage() {
           </div>
           <div className="min-w-0 space-y-3">
             <h2 className="text-sm font-semibold text-slate-900">Check result</h2>
+            {copy?.copiedFrom && (
+              <Notice tone="info">
+                Copied from <strong>{copy.copiedFrom}</strong>. The survey id and title on line 1 were changed, so this saves as a
+                separate survey. Edit anything you like, then save the draft.
+              </Notice>
+            )}
             {error && <Notice tone="warning">{error}</Notice>}
             {check?.error_count ? (
               <Notice tone="info">You can save a draft with errors and fix them later. It just can't be approved until they're gone.</Notice>

@@ -1,13 +1,15 @@
 // /surveys/:id  One survey: dashboard, questionnaire (draft editor), preview & share, versions.
 // Admin-only buttons (approve, go live, deadline, close) sit in the header, each behind a confirm dialog.
+// Everyone can "Copy as new wave" (bonus: clone), which opens New survey with a renamed copy.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, BadgeCheck, CalendarClock, Lock, Rocket } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CalendarClock, Copy, Lock, Rocket } from "lucide-react";
 import { Badge, Button, ConfirmDialog, ErrorBox, Field, Skeleton, StatusChip, cx, inputClass, useToast } from "../components/ui";
 import { api } from "../lib/api";
 import { isAdmin, useAuth } from "../lib/auth";
 import { CLOSED_LABEL, formatDateTime, localInputValue, relative } from "../lib/format";
 import type { SurveyDetail } from "../lib/types";
+import { nextWave } from "./clone";
 import { DashboardTab } from "./DashboardTab";
 import { PreviewTab } from "./PreviewTab";
 import { QuestionnaireTab } from "./QuestionnaireTab";
@@ -33,6 +35,7 @@ export function SurveyDetailPage() {
   const [error, setError] = useState<{ message: string; status: number } | null>(null);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [deadline, setDeadline] = useState("");
+  const [copying, setCopying] = useState(false);
 
   const load = useCallback(() => {
     setError(null);
@@ -58,6 +61,22 @@ export function SurveyDetailPage() {
   const nextVersion = (survey.versions[0]?.version_no ?? 0) + 1;
   const canApprove = admin && survey.draft?.check.ok;
   const canGoLive = admin && survey.status !== "live" && survey.current_version_no !== null;
+
+  // Clone: newest approved version (or the draft if nothing is approved yet), with a new id and title
+  async function copyAsNewWave() {
+    if (!survey) return;
+    setCopying(true);
+    try {
+      const newest = survey.versions[0]?.version_no;
+      const source = newest ? (await api.version(survey.id, newest)).text : survey.draft?.text ?? "";
+      const taken = (await api.listSurveys()).map((s) => s.slug);
+      const copy = nextWave(source, taken);
+      navigate("/surveys/new", { state: { text: copy.text, copiedFrom: survey.title } });
+    } catch (err) {
+      toast((err as Error).message, "error");
+      setCopying(false);
+    }
+  }
 
   const act = (label: string, run: () => Promise<SurveyDetail>) => async () => {
     const updated = await run();
@@ -86,9 +105,8 @@ export function SurveyDetailPage() {
             )}
           </p>
         </div>
-        {admin && (
-          <div className="flex flex-wrap gap-2">
-            {canApprove && (
+        <div className="flex flex-wrap gap-2">
+            {admin && canApprove && (
               <Button variant="success" icon={<BadgeCheck className="size-4" />} onClick={() => setDialog("approve")}>Approve as v{nextVersion}</Button>
             )}
             {canGoLive && (
@@ -97,7 +115,7 @@ export function SurveyDetailPage() {
                 setDialog("live");
               }}>{survey.status === "closed" ? "Reopen" : "Go live"}</Button>
             )}
-            {survey.status === "live" && (
+            {admin && survey.status === "live" && (
               <>
                 <Button variant="secondary" icon={<CalendarClock className="size-4" />} onClick={() => {
                   setDeadline(localInputValue(new Date(survey.deadline ?? Date.now())));
@@ -106,8 +124,10 @@ export function SurveyDetailPage() {
                 <Button variant="secondary" className="text-rose-600" icon={<Lock className="size-4" />} onClick={() => setDialog("close")}>Close</Button>
               </>
             )}
-          </div>
-        )}
+            {(survey.current_version_no || survey.draft) && (
+              <Button variant="ghost" icon={<Copy className="size-4" />} loading={copying} onClick={copyAsNewWave}>Copy as new wave</Button>
+            )}
+        </div>
       </div>
 
       <div className="mb-6 flex gap-1 overflow-x-auto border-b border-slate-200" role="tablist">
