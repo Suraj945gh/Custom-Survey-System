@@ -1,7 +1,8 @@
 // Live dashboard. Refreshes every 5 seconds while the page is visible.
-// Started / completed / terminated / in progress, quota groups, termination reasons, where people stop.
+// Started / completed / terminated / in progress, quota groups, termination reasons, where people stop,
+// and quality flags (speeders, straight-lining). Flags never remove a response.
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Ban, CheckCircle2, Download, FileSpreadsheet, Hourglass, Share2, Users } from "lucide-react";
+import { Ban, CheckCircle2, Download, FileSpreadsheet, Flag, Hourglass, Share2, Users } from "lucide-react";
 import { Badge, Button, Card, EmptyState, ErrorBox, ProgressBar, Skeleton, cx, useToast } from "../components/ui";
 import { api } from "../lib/api";
 import { plural, relative } from "../lib/format";
@@ -143,9 +144,44 @@ export function DashboardTab({ survey, onShare }: { survey: SurveyDetail; onShar
             </table>
           )}
         </Card>
+
+        <Card className="p-5 lg:col-span-2">
+          <h2 className="flex items-center gap-2 font-semibold text-slate-900"><Flag className="size-4 text-amber-500" /> Quality flags</h2>
+          <p className="text-xs text-slate-500">
+            Speeder: under 2 seconds per question, or under a third of the typical time. Straight-lining: the same answer on every matrix row.
+            Flags never remove a response; they are also in the export.
+          </p>
+          {data.quality.checked === 0 ? <p className="mt-3 text-sm text-slate-500">Flags appear once people complete the survey.</p> : (
+            <>
+              <p className="mt-3 text-sm text-slate-700">
+                <strong className="tabular-nums">{plural(data.quality.speeders, "speeder")}</strong> ·{" "}
+                <strong className="tabular-nums">{plural(data.quality.straight_liners, "straight-liner")}</strong>{" "}
+                <span className="text-slate-500">out of {plural(data.quality.checked, "complete")}</span>
+              </p>
+              {data.quality.flagged.length > 0 && (
+                <ul className="mt-3 divide-y divide-slate-100 text-sm">
+                  {data.quality.flagged.map((f) => (
+                    <li key={f.respondent_id ?? f.flags.join()} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                      <span className="font-medium text-slate-700">Respondent {f.respondent_id}</span>
+                      <span className="flex flex-wrap items-center gap-2">
+                        {f.flags.map((flag) => <Badge key={flag} tone="amber">{flag}</Badge>)}
+                        <span className="text-xs tabular-nums text-slate-500">{duration(f.seconds)}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </Card>
       </div>
     </div>
   );
+}
+
+function duration(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  return m ? `${m} min ${seconds % 60} s` : `${seconds} s`;
 }
 
 function Stat({ icon, label, value, note }: { icon: ReactNode; label: string; value: number; note: string }) {

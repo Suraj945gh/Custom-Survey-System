@@ -90,6 +90,12 @@ export interface Dashboard {
   reasons: { reason: string; count: number }[];
   versions: { version_no: number | null; started: number; completed: number }[];
   drop_off: { question: string; count: number }[];
+  quality: {
+    checked: number;
+    speeders: number;
+    straight_liners: number;
+    flagged: { respondent_id: number | null; flags: string[]; seconds: number }[];
+  };
   test_runs: number;
   updated_at: string;
 }
