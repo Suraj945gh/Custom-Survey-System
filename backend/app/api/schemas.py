@@ -125,6 +125,7 @@ class SurveyOut(BaseModel):
     created_at: datetime
     current_version_no: int | None
     has_draft: bool
+    completed: int = 0
 
 
 class SurveyDetailOut(SurveyOut):

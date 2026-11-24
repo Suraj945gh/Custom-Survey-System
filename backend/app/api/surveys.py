@@ -6,11 +6,14 @@ change the deadline and close (decision D8).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from typing import Literal
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
+from app.services import reports
 from app.services import respond as respond_service
 from app.services import surveys as service
 from app.tables import Survey, SurveyVersion, User
@@ -38,7 +41,7 @@ router = APIRouter(prefix="/api", tags=["surveys"], dependencies=[Depends(curren
 # --------------------------------------------------------------------------- shaping the replies
 
 
-def _survey_out(survey: Survey) -> dict:
+def _survey_out(survey: Survey, completed: int = 0) -> dict:
     current = service.current_version(survey)
     return dict(
         id=survey.id, slug=survey.slug, title=survey.title, status=survey.status, target=survey.target,
@@ -46,6 +49,7 @@ def _survey_out(survey: Survey) -> dict:
         closed_reason=survey.closed_reason, created_at=survey.created_at,
         current_version_no=current.version_no if current else None,
         has_draft=service.draft_of(survey) is not None,
+        completed=completed or 0,
     )
 
 
@@ -56,7 +60,7 @@ def _version_out(version: SurveyVersion) -> dict:
     )
 
 
-def _detail(survey: Survey) -> SurveyDetailOut:
+def _detail(db: Session, survey: Survey) -> SurveyDetailOut:
     draft = service.draft_of(survey)
     draft_out = None
     if draft is not None:
@@ -66,7 +70,7 @@ def _detail(survey: Survey) -> SurveyDetailOut:
             check=CheckOut.of(service.check_text(draft.file_text, expected_slug=survey.slug)),
         )
     return SurveyDetailOut(
-        **_survey_out(survey),
+        **_survey_out(survey, respond_service.completes(db, survey.id)),
         versions=[VersionOut(**_version_out(v)) for v in reversed(service.approved_versions(survey))],
         draft=draft_out,
     )
@@ -100,32 +104,33 @@ def check(body: TextIn):
 
 @router.get("/surveys", response_model=list[SurveyOut])
 def list_surveys(db: Session = Depends(get_db)):
-    return [_survey_out(s) for s in service.list_surveys(db)]
+    counts = reports.completed_counts(db)
+    return [_survey_out(s, counts.get(s.id, 0)) for s in service.list_surveys(db)]
 
 
 @router.post("/surveys", response_model=SurveyDetailOut, status_code=status.HTTP_201_CREATED)
 def save_new_draft(body: TextIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
     """Save pasted text as a draft. Same <survey id> as an existing survey -> its new draft."""
     survey, _ = service.save_draft(db, body.text, user, body.file_name)
-    return _detail(survey)
+    return _detail(db, survey)
 
 
 @router.post("/surveys/upload", response_model=SurveyDetailOut, status_code=status.HTTP_201_CREATED)
 def upload_draft(file: UploadFile = File(...), db: Session = Depends(get_db), user: User = Depends(current_user)):
     survey, _ = service.save_draft(db, _read_upload(file), user, file.filename)
-    return _detail(survey)
+    return _detail(db, survey)
 
 
 @router.get("/surveys/{survey_id}", response_model=SurveyDetailOut)
 def get_survey(survey_id: int, db: Session = Depends(get_db)):
-    return _detail(service.refresh_status(db, service.get_survey(db, survey_id)))
+    return _detail(db, service.refresh_status(db, service.get_survey(db, survey_id)))
 
 
 @router.put("/surveys/{survey_id}/draft", response_model=SurveyDetailOut)
 def update_draft(survey_id: int, body: TextIn, db: Session = Depends(get_db), user: User = Depends(current_user)):
     survey = service.get_survey(db, survey_id)
     service.save_draft(db, body.text, user, body.file_name, survey=survey)
-    return _detail(survey)
+    return _detail(db, survey)
 
 
 @router.delete("/surveys/{survey_id}/draft", status_code=status.HTTP_204_NO_CONTENT)
@@ -153,6 +158,29 @@ def get_version(survey_id: int, version_no: int, db: Session = Depends(get_db)):
     )
 
 
+# --------------------------------------------------------------------------- dashboard and export
+
+
+@router.get("/surveys/{survey_id}/dashboard")
+def dashboard(survey_id: int, db: Session = Depends(get_db)):
+    """Live numbers: counts, quota groups, termination reasons, where people stopped."""
+    return reports.dashboard(db, service.get_survey(db, survey_id))
+
+
+@router.get("/surveys/{survey_id}/export")
+def export(survey_id: int, format: Literal["csv", "xlsx"] = Query("csv"), db: Session = Depends(get_db)):
+    """Completed responses in the standard format, as CSV or Excel."""
+    survey = service.get_survey(db, survey_id)
+    headers, rows = reports.export_table(db, survey)
+    if format == "xlsx":
+        content = reports.to_xlsx(headers, rows, survey.title)
+        media = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    else:
+        content, media = reports.to_csv(headers, rows), "text/csv; charset=utf-8"
+    name = reports.export_file_name(survey, format)
+    return Response(content, media_type=media, headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+
 # --------------------------------------------------------------------------- admin only
 
 
@@ -160,25 +188,25 @@ def get_version(survey_id: int, version_no: int, db: Session = Depends(get_db)):
 def approve(survey_id: int, db: Session = Depends(get_db), user: User = Depends(admin_user)):
     survey = service.get_survey(db, survey_id)
     service.approve(db, survey, user)
-    return _detail(survey)
+    return _detail(db, survey)
 
 
 @router.post("/surveys/{survey_id}/go-live", response_model=SurveyDetailOut, dependencies=[Depends(admin_user)])
 def go_live(survey_id: int, body: GoLiveIn | None = None, db: Session = Depends(get_db)):
     survey = service.get_survey(db, survey_id)
     service.go_live(db, survey, body.deadline if body else None)
-    return _detail(survey)
+    return _detail(db, survey)
 
 
 @router.patch("/surveys/{survey_id}/deadline", response_model=SurveyDetailOut, dependencies=[Depends(admin_user)])
 def set_deadline(survey_id: int, body: DeadlineIn, db: Session = Depends(get_db)):
     survey = service.get_survey(db, survey_id)
     service.set_deadline(db, survey, body.deadline)
-    return _detail(survey)
+    return _detail(db, survey)
 
 
 @router.post("/surveys/{survey_id}/close", response_model=SurveyDetailOut, dependencies=[Depends(admin_user)])
 def close(survey_id: int, db: Session = Depends(get_db)):
     survey = service.get_survey(db, survey_id)
     service.close(db, survey)
-    return _detail(survey)
+    return _detail(db, survey)
