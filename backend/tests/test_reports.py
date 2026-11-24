@@ -2,13 +2,14 @@
 
 import csv
 import io
+from datetime import timedelta
 
 import pytest
 from openpyxl import load_workbook
 
 from app.services import surveys as survey_service
-from app.tables import Survey
-from tests.test_api_respond import FULL_PATH, Person, make_live
+from app.tables import Response, Survey
+from tests.test_api_respond import FULL_PATH, MATRIX, Person, make_live, response_of
 
 Q6 = "Q6. Which smartphone brands have you used in the last 3 years? (pick up to 3)"
 Q11 = "Q11. How much do you agree with each statement about your phone?"
@@ -37,8 +38,8 @@ def export_csv(client, headers, survey_id):
 class TestExport:
     def test_headers_follow_the_standard_format(self, client, researcher_headers, filled):
         header = export_csv(client, researcher_headers, filled.id)[0]
-        assert header[:3] == ["Respondent ID", "Version", "Completed at"]
-        assert header[3] == "Q1. Do you agree to take part in this survey?"
+        assert header[:4] == ["Respondent ID", "Version", "Completed at", "Quality flags"]
+        assert header[4] == "Q1. Do you agree to take part in this survey?"
         assert not any(h.startswith("Q0.") for h in header)  # info screens have no answer
         assert f"{Q6} - Samsung" in header and f"{Q6} - Other" in header  # one column per option
         assert f"{Q11} - The battery lasts a full day" in header  # one column per matrix row
@@ -62,7 +63,7 @@ class TestExport:
         r = client.get(f"/api/surveys/{filled.id}/export?format=xlsx", headers=researcher_headers)
         sheet = load_workbook(io.BytesIO(r.content)).active
         rows = list(sheet.iter_rows(values_only=True))
-        assert rows[0][:3] == ("Respondent ID", "Version", "Completed at")
+        assert rows[0][:4] == ("Respondent ID", "Version", "Completed at", "Quality flags")
         assert rows[1][1] == 1 and len(rows) == 2
 
     def test_new_version_shows_in_the_version_column(self, client, db, researcher_headers, filled, sample_text,
@@ -103,3 +104,60 @@ class TestDashboard:
     def test_survey_list_shows_completes(self, client, researcher_headers, filled):
         listed = client.get("/api/surveys", headers=researcher_headers).json()
         assert listed[0]["completed"] == 1
+
+
+def took(db, token, minutes):
+    """Pretend this person started `minutes` before they finished."""
+    r = response_of(db, token)
+    r.started_at = r.ended_at - timedelta(minutes=minutes)
+    db.commit()
+
+
+def path_with_matrix(matrix):
+    return [step if step[0] != "q11" else ("q11", matrix) for step in FULL_PATH]
+
+
+class TestQualityFlags:
+    """Bonus: speeders and straight-lining are flagged, never deleted."""
+
+    def test_a_normal_complete_is_not_flagged(self, client, db, researcher_headers, filled):
+        took(db, db.query(Response).filter_by(status="completed").one().token, 6)
+        d = client.get(f"/api/surveys/{filled.id}/dashboard", headers=researcher_headers).json()
+        assert d["quality"] == {"checked": 1, "speeders": 0, "straight_liners": 0, "flagged": []}
+        header, row = export_csv(client, researcher_headers, filled.id)
+        assert dict(zip(header, row))["Quality flags"] == ""
+
+    def test_speeder_under_two_seconds_per_answer(self, client, db, researcher_headers, filled):
+        # 17 answers in 20 seconds: nobody can read that fast
+        r = db.query(Response).filter_by(status="completed").one()
+        r.started_at = r.ended_at - timedelta(seconds=20)
+        db.commit()
+        d = client.get(f"/api/surveys/{filled.id}/dashboard", headers=researcher_headers).json()
+        assert d["quality"]["speeders"] == 1
+        assert d["quality"]["flagged"][0]["flags"] == ["Speeder"]
+        assert d["quality"]["flagged"][0]["seconds"] == 20
+
+    def test_speeder_against_the_median(self, client, db, researcher_headers, filled):
+        db.query(Response).filter_by(status="completed").one().started_at -= timedelta(minutes=9)
+        db.commit()
+        for n in range(10, 15):  # five more completes, about 9 minutes each, one in 2 minutes
+            person = Person(client, number=n)
+            person.walk(FULL_PATH)
+            took(db, person.token, 2 if n == 14 else 9)
+        d = client.get(f"/api/surveys/{filled.id}/dashboard", headers=researcher_headers).json()
+        assert d["quality"]["checked"] == 6 and d["quality"]["speeders"] == 1
+        assert d["quality"]["flagged"][0]["seconds"] == 120
+
+    def test_straight_lining(self, client, db, researcher_headers, filled):
+        same = {row: "Strongly agree" for row in MATRIX}
+        person = Person(client, number=20)
+        person.walk(path_with_matrix(same))
+        took(db, person.token, 7)
+        took(db, db.query(Response).filter_by(status="completed").first().token, 7)
+        d = client.get(f"/api/surveys/{filled.id}/dashboard", headers=researcher_headers).json()
+        assert d["quality"]["straight_liners"] == 1 and d["quality"]["speeders"] == 0
+        assert d["quality"]["flagged"][0]["flags"] == ["Straight-lining (q11)"]
+        header, *rows = export_csv(client, researcher_headers, filled.id)
+        flags = [dict(zip(header, row))["Quality flags"] for row in rows]
+        assert sorted(flags) == ["", "Straight-lining (q11)"]
+        assert len(rows) == 2  # flagged responses are kept
