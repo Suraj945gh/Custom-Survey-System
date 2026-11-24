@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import auth, respond, surveys, users
+from app.api import auth, meta, respond, surveys, users
 from app.api.schemas import IssueOut
 from app.config import settings
 from app.db import create_tables
@@ -50,6 +50,7 @@ def create_app() -> FastAPI:
     app.include_router(users.router)
     app.include_router(surveys.router)
     app.include_router(respond.router)
+    app.include_router(meta.router)
     return app
 
 
