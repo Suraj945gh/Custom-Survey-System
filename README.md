@@ -3,252 +3,166 @@
 A survey tool for the Concave Insights research team. You write a questionnaire as a simple text
 file, and the app turns it into a working mobile survey.
 
-> **Walkthrough video:** _link added on submission day_
+> **Walkthrough video:** [Watch on Google Drive](https://drive.google.com/file/d/196hZw6Da_YVQ-qZQG4V2Tsw8gB23LqV7/view?usp=sharing)
 
 ---
 
 ## 1. Project Overview
 
-The research team uploads a questionnaire as a plain `.txt` file. The app checks it and lists every
-mistake with its line number. The team clicks through it as a test respondent, then an admin
-approves it as a frozen version and puts it live. Respondents answer on their phones through a
-personal link, and every answer is saved the moment they tap it. The team watches a live dashboard
-and downloads clean results as CSV or Excel, in the same layout for every survey.
+The research team uploads a questionnaire as a plain `.txt` file, and the app lists every mistake
+with its line number. They click through it as a test respondent, then an admin approves it as a
+frozen version and puts it live. Respondents answer on their phones through a personal link, and
+every answer is saved the moment they tap it. The team watches a live dashboard and downloads
+results as CSV or Excel, in the same layout for every survey.
 
-**The journey of one survey:**
+**Upload & check → Preview → Admin approves (v1, frozen) → Live on mobile → Dashboard & export**
 
-```
- Write the .txt  ──►  Upload & check  ──►  Preview / test  ──►  Admin approves (v1)  ──►  Live
-                      (errors with line                          (frozen, can never                │
-                       numbers)                                   change)                          ▼
-                                                          Respondents answer on their phones
-                                                          (saved after every tap, can resume)
-                                                                         │
-                                         Live dashboard  ◄───────────────┤
-                                         CSV / Excel export ◄────────────┘
-```
-
-No AI is used anywhere. The questionnaire format is fixed, so the checks are exact rules: the same
-file always gives the same result, instantly.
+No AI is used. The file format is fixed, so the checks are exact rules: the same file always gives
+the same result.
 
 ---
 
 ## 2. Tech Stack
 
-| Part | What we used | In plain words |
-|---|---|---|
-| Backend | **Python 3.11**, **FastAPI** | The "brain": reads files, applies the survey rules, saves answers |
-| Database | **SQLite** via **SQLAlchemy** | One file (`backend/survey.db`), no database server needed |
-| Frontend | **React 18 + TypeScript**, built with **Vite** | The screens you click |
-| Styling | **Tailwind CSS 4**, **lucide-react** icons | Look and feel, mobile-first |
-| Export | **openpyxl** (Excel), Python's `csv` | The download files |
-| Tests | **pytest** (622 tests), **Vitest** + Testing Library (20 tests) | Checks that run automatically |
+- **Backend:** Python 3.11, FastAPI
+- **Database:** SQLite through SQLAlchemy (a single file, no database server needed)
+- **Frontend:** React 18 + TypeScript, built with Vite; Tailwind CSS 4 for a mobile-first design
+- **Export:** openpyxl for Excel, Python's `csv` for CSV
+- **Tests:** pytest (622 tests) and Vitest (20 tests)
 
-Logins use only Python's standard library: passwords are stored as PBKDF2 hashes, and logins use
-signed tokens.
-
-**Where things are**
-
-```
-backend/
-  app/questionnaire/   reads the .txt file (parser) and checks it (validator)
-  app/engine/          decides which question comes next: skips, show-if, termination, piping, quotas
-  app/services/        the business rules: versions, going live, respondents, dashboard, export
-  app/api/             the web addresses (endpoints) the screens call
-  app/tables.py        the 8 database tables
-  tests/               622 automatic tests
-frontend/src/
-  respondent/          the phone screens: join, one question per screen, end screens
-  staff/               the research team's screens: list, upload, editor, preview, dashboard
-design/                Day 2 user flow and database diagram (unchanged since Day 2)
-docs/                  later notes about the build
-samples/               the two questionnaires from the brief
-```
+**Where things are:** `backend/app/questionnaire` reads and checks the file, `backend/app/engine`
+decides which question comes next, `backend/app/services` holds the business rules,
+`frontend/src/respondent` holds the phone screens, and `frontend/src/staff` holds the team's
+screens. `design/` is the Day 2 design and `docs/` has later notes.
 
 ---
 
 ## 3. Setup and Run
 
-You need **Python 3.11+** and **Node.js 20+** installed. It takes about 3–5 minutes, most of it
-spent downloading packages.
+You need **Python 3.11+** and **Node.js 20+**. It takes about 3–5 minutes.
 
 ```bash
 git clone https://github.com/Suraj945gh/Custom-Survey-System.git
 cd Custom-Survey-System
 ```
 
-**Terminal 1: the backend**
-
+**Terminal 1: backend**
 ```bash
 cd backend
 python -m venv .venv
-.venv\Scripts\activate            # Windows
-# source .venv/bin/activate       # macOS / Linux
+.venv\Scripts\activate            # Windows   (macOS / Linux: source .venv/bin/activate)
 pip install -r requirements.txt
-python -m app.seed                # loads the demo data (see section 4)
-uvicorn app.main:app --reload     # runs on http://localhost:8000
+python -m app.seed                # loads the demo data
+uvicorn app.main:app --reload     # http://localhost:8000
 ```
 
-**Terminal 2: the frontend**
-
+**Terminal 2: frontend**
 ```bash
 cd frontend
 npm install
-npm run dev                       # runs on http://localhost:5173
+npm run dev                       # http://localhost:5173
 ```
 
-Now open **http://localhost:5173** and log in with one of the demo accounts below.
+Open **http://localhost:5173** and log in with a demo account (section 4).
 
-**Useful extras**
-
-| Want to… | Run |
-|---|---|
-| Start again from clean demo data | `python -m app.seed --reset` (in `backend`) |
-| Demo data without the made-up respondents | `python -m app.seed --reset --no-responses` |
-| See and try every API endpoint in the browser | open http://localhost:8000/docs |
-| Check a questionnaire from the command line | `python -m app.cli check ../samples/concave_broken_questionnaire.txt` |
-| Run the backend tests | `pytest` (in `backend`) |
-| Run the frontend tests | `npm test` (in `frontend`) |
-
-**Try it on a real phone.** The phone must be on the same Wi-Fi as the computer. Open a survey,
-go to **Preview & share**, and open the link marked **"Open on a phone"**. It looks like
-`http://192.168.x.x:5173/s/smartphone_study`. If the phone can't load it, allow Node.js through
-the Windows firewall for private networks.
+- **Start over with fresh demo data:** `python -m app.seed --reset`
+- **Try every API endpoint in the browser:** http://localhost:8000/docs
+- **Run the tests:** `pytest` in `backend`, `npm test` in `frontend`
+- **On a real phone:** connect it to the same Wi-Fi as the computer, then open the "Open on a
+  phone" link from the survey's **Preview & share** tab.
 
 ---
 
 ## 4. Demo Logins and Test Data
 
-| Role | Email | Password | What they can do |
-|---|---|---|---|
-| **Admin** | `admin@demo.local` | `admin12345` | Everything a researcher can do, **plus** approve versions, go live, change deadlines, close surveys, add team members |
-| **Researcher** | `researcher@demo.local` | `research12345` | Upload and fix questionnaires, preview and test, see dashboards, export, copy a survey |
-| **Respondent** | no login | | Opens **http://localhost:5173/s/smartphone_study**, types a mobile number, answers |
-
-The login page has a **"Use"** button next to each demo account, so you don't need to type them.
-
-**What the demo data contains**
-
-| Survey | State | Why it's there |
+| Role | Email | Password |
 |---|---|---|
-| **Smartphone Usage Study** (`samples/concave_sample_questionnaire.txt`) | Approved as v1, **live**, deadline in 15 days, **42 made-up respondents** | Shows a running survey with a full dashboard and a real export |
-| **Snack Habits Study** (`samples/concave_broken_questionnaire.txt`) | Draft with **11 errors** | Shows the upload check: every mistake with its line number |
+| **Admin** (also approves, goes live, closes, manages the team) | `admin@demo.local` | `admin12345` |
+| **Researcher** (uploads, fixes, previews, dashboard, export) | `researcher@demo.local` | `research12345` |
+| **Respondent** (no login) | open http://localhost:5173/s/smartphone_study | any 10-digit mobile number |
 
-The 42 made-up respondents answered through the same code as real people: 30 completed, 6 were
-screened out, and 6 stopped half-way. Two of them answered too fast and two gave the same answer on
-every matrix row, so the quality flags have something to show. Their phone numbers start with
-`70000`.
+The login page has a **"Use"** button for each demo account.
 
-**Things to try as a respondent**
-- Use any 10-digit number starting with 6–9. A number that **completes** a survey can't join
-  another one for 90 days (the cool-off rule), so use a new number for each full test.
-- Type age `12`. You get a clear message on the same screen.
-- Pick **Other (specify)** in the brands question and type `Nokia`. Later questions then say
-  "your Nokia phone".
-- Close the page half-way, then open the link again. It continues where you stopped.
-- Pick city **Other city**. You are screened out with a polite "not eligible" screen.
+**Demo data**
+- **Smartphone Usage Study** (the sample file): approved as v1 and live, with 42 made-up
+  respondents. 30 completed, 6 were screened out and 6 stopped half-way, so the dashboard and
+  export have data.
+- **Snack Habits Study** (the broken file): a draft with 11 errors, to show the upload check.
+
+A number that completes a survey can't join another one for 90 days, so use a new number for each
+full test.
 
 ---
 
 ## 5. Features
 
-### Core features (all from the brief)
+### Core features: all done ✅
 
-| Feature | Status | Notes |
-|---|---|---|
-| **Upload** a `.txt` questionnaire | ✅ Done | Drag and drop, choose a file, or paste / type into the editor |
-| **Upload check** with line numbers | ✅ Done | Finds all 10 planted mistakes in the broken file, each with its line. Suggests fixes ("did you mean `single`?"). Re-checks live while you type |
-| **Preview and test mode** | ✅ Done | Runs inside a phone frame with every rule working. Test answers are flagged and never counted. Testers see why a test run ended |
-| **Approve and version** | ✅ Done | Approving freezes v1, v2, …. Every response records its version. An identical file can't be approved twice |
-| **All 13 question types** | ✅ Done | single, multi (live counter), dropdown (with search), yesno, rating (labelled ends), nps (coloured 0–10), matrix, text, longtext, number, formatted (pincode / phone / email), info, consent |
-| **Required questions** | ✅ Done | A clear message on the same screen |
-| **Other (specify)** | ✅ Done | The typed text is used on screen, in piping, in "options-from" and in the export (`Other-Nokia`) |
-| **None of these** | ✅ Done | Picking it clears every other option |
-| **Shuffle** | ✅ Done | Fixed options ("Other", "None") stay last. Each person's order is saved, so Back and resume show the same order |
-| **Skip logic and show-if** (AND / OR) | ✅ Done | Brackets and `= != > >= < <=` work too |
-| **Termination** with every reason | ✅ Done | All failed rules are kept, joined with `\|` (e.g. `q4: City not in scope \| q5: Not a smartphone user`). Silent termination supported |
-| **Piping and options-from** | ✅ Done | `[q7]` shows the earlier answer. options-from shows only what was picked earlier |
-| **Many surveys at once** | ✅ Done | Draft / Live / Closed, each with its own target, quotas and deadline |
-| **Unique links** | ✅ Done | Each person gets a private token link. Opening it after finishing shows "Already completed" |
-| **Closing** | ✅ Done | Closes automatically when the target is reached or the deadline passes, or when an admin closes it. A full quota group screens out new people in that group |
-| **Save every answer** | ✅ Done | Each answer is saved the moment it is given |
-| **Resume and Back** | ✅ Done | Reopening continues at the next unanswered question. Back keeps every answer |
-| **Progress bar and status** | ✅ Done | In progress / Completed / Terminated. Half-filled responses are never counted |
-| **End screens** | ✅ Done | Completed, Not eligible, Survey closed (with the reason), Already completed |
-| **Live dashboard** | ✅ Done | Started / completed / terminated / in-progress, quota bars (target, done, left), count per reason. Refreshes every 5 seconds |
-| **Export CSV and Excel** | ✅ Done | Exactly the brief's format (details in section 8) |
-| **Local setup with the sample loaded** | ✅ Done | `python -m app.seed` |
-| **3-month cool-off** (from the background section) | ✅ Done | See section 8 |
-| **Roles: admin and researcher** | ✅ Done | Admin-only actions are refused by the server, not just hidden |
-| **Empty, loading and error states** | ✅ Done | On every screen. If the phone goes offline, the answer stays on screen and is sent again when the person taps Next |
+- **Upload and check:** upload, drag and drop or paste a `.txt` file. Every error is shown with
+  its line number and a suggested fix ("did you mean `single`?"), and the check re-runs live while
+  you edit. All 10 planted mistakes in the broken file are found.
+- **Preview and test mode:** click through the survey in a phone frame with every rule working.
+  Test answers are kept apart and never counted.
+- **Approve and version:** approval freezes the file as v1, v2, … Every response records its version.
+- **All 13 question types:** single, multi (with a live counter), dropdown (with search), yesno,
+  rating, nps, matrix, text, longtext, number, formatted (pincode / phone / email), info, consent.
+- **Rules:** required questions, Other (specify) with the typed text used everywhere, None of
+  these, and shuffle with fixed options kept last.
+- **Logic:** skip-to; show-if with AND / OR; termination that keeps every reason
+  (`q4: City not in scope | q5: Not a smartphone user`), including silent termination; piping;
+  options-from.
+- **Many surveys at once:** Draft / Live / Closed, each with its own target, quotas and deadline.
+  A survey closes when its target is reached, when its deadline passes, or when an admin closes it.
+- **Mobile filling:** a unique token link per person, every answer saved instantly, resume, Back,
+  a progress bar, and four end screens (Completed, Not eligible, Survey closed, Already completed).
+- **Live dashboard:** started, completed, terminated and in-progress counts, quota bars, and a
+  count per termination reason. It refreshes every 5 seconds.
+- **Export:** CSV and Excel in the standard format.
+- **Also:** the 3-month cool-off rule, admin and researcher roles, and empty, loading and error
+  states on every screen.
 
-### Bonus features
+### Bonus features done ✅
 
-We picked the bonus features that add real value for little code, and kept the rest for later.
-
-| Feature | Status | Notes |
-|---|---|---|
-| **Drop-off report** | ✅ Done | Dashboard card: the last question answered by people who are still in progress |
-| **Quality flags** | ✅ Done | **Speeder**: under 2 seconds per question, or under a third of the median time once there are 5+ completes. **Straight-lining**: the same answer on every row of a matrix with 3+ rows. Shown on the dashboard and in an export column. Flags never delete a response |
-| **Clone** | ✅ Done | "Copy as new wave" opens the questionnaire as a new, separate survey (`smartphone_study_wave2`, "… (Wave 2)") |
-| Shuffle matrix rows and save the order | ❌ Not done | The saved-order mechanism already exists for options, so this would be a small step |
-| Nested quota (Mumbai + Male) | ❌ Not done | Needs a new quota tag format |
-| Balanced AB / BA rotation | ❌ Not done | |
-| Two languages | ❌ Not done | |
-| Payments and referral rewards (from the background section) | ❌ Not done | See section 9 |
+- **Quality flags:** speeders (too fast) and straight-liners (the same answer on every matrix row)
+  are flagged on the dashboard and in the export. A flag never deletes a response.
+- **Clone:** "Copy as new wave" turns a survey into a new, separate survey for a second wave.
+- **Drop-off report:** shows the last question answered by people who are still half-way.
 
 ---
 
 ## 6. Database Design
 
-The full diagrams are in **[/design](design/)**: [user flow](design/user_flow.md) and
-[database](design/database.md), drawn on Day 2. The columns added while building are listed in
-[docs/database_build_notes.md](docs/database_build_notes.md). No table was added or removed.
+The Day 2 diagrams are in **[/design](design/)** ([user flow](design/user_flow.md),
+[database](design/database.md)). Columns added during the build are listed in
+[docs/database_build_notes.md](docs/database_build_notes.md).
 
-**8 tables, in plain words**
-
-| Table | One row is… | Key links |
-|---|---|---|
-| `users` | a team member (admin or researcher) | |
-| `surveys` | one study, e.g. "Smartphone Usage Study". Holds its status (draft / live / closed), target and deadline | |
-| `survey_versions` | one copy of the questionnaire file. A **draft** has no number; approval gives it v1, v2, … and freezes it | → survey |
-| `questions` | one question of one version, with its options and rules stored as data (JSON) | → version |
-| `quotas` | one quota of one version, e.g. Mumbai = 80 | → version |
-| `respondents` | one person, identified by mobile number (used for the 90-day cool-off) | |
-| `responses` | one person taking one survey: the token link, the **version** they answered, status, end reasons, test flag | → survey, version, respondent |
-| `answers` | one answer to one question, saved the moment it is given | → response, question |
+| Table | One row is… |
+|---|---|
+| `users` | a team member (admin or researcher) |
+| `surveys` | one study, with its status, target and deadline |
+| `survey_versions` | one copy of the questionnaire file: a draft, or a frozen v1, v2, … |
+| `questions` | one question of a version, with its options and rules stored as data |
+| `quotas` | one quota of a version, e.g. Mumbai = 80 |
+| `respondents` | one person, by mobile number (used for the cool-off rule) |
+| `responses` | one person taking one survey: token link, version answered, status, end reasons |
+| `answers` | one answer to one question, saved the moment it is given |
 
 ```
-users
 surveys ──< survey_versions ──< questions ──< answers >── responses >── respondents
-                    │                                        │
-                    └──< quotas                              └── also points to survey + version
+                    └──< quotas                              (a response also points to its survey and version)
 ```
-(`──<` means "one to many": one survey has many versions, one version has many questions, and so on.)
 
-**Why this shape?**
-- **The questionnaire is stored as data, not code** (the brief's Safety Rule). Every survey is
-  shown by the same screens, which read the `questions` rows.
-- **Versions are frozen copies.** A response points at the exact version it answered, so changing
-  the file later can never change what an old answer meant.
-- **One answer row per question**, written immediately. If a phone dies at q14, q1–q13 are already
-  in the database.
-- **The database itself stops duplicates:** one response per person per survey, one answer per
-  question per response, one question id per version.
+- **The questionnaire is stored as data, not code,** so every survey is shown by the same screens.
+- **A response points to the exact version it answered,** so later changes never change old answers.
+- **Each answer is saved straight away.** If a phone dies at q14, q1–q13 are already saved.
 
 ---
 
 ## 7. API Endpoints
 
 All addresses start with `http://localhost:8000`. Staff endpoints need the header
-`Authorization: Bearer <token>`, which you get from the login endpoint. Respondent endpoints
-(`/api/public/...`) need no login: the token in the link is the key.
-
-Every error comes back as plain JSON, never as a crash, for example:
-`{"detail": "Only an admin can do this."}`. The status codes are 401 (not logged in), 403 (not
-allowed), 404 (not found), 409 (not possible right now) and 422 (bad input).
-
-You can also try every endpoint in the browser at **http://localhost:8000/docs**.
+`Authorization: Bearer <token>` from login. Respondent endpoints (`/api/public/...`) need no login.
+Errors always come back as plain JSON such as `{"detail": "Only an admin can do this."}`.
 
 ### Overview
 
@@ -528,66 +442,45 @@ GET /api/public/r/seqoeRcEguC63MBWju7-BQ/questions/q4
 ```
 </details>
 
+
 ---
 
 ## 8. Assumptions and Decisions
 
-### The open question from the brief: what happens to in-progress responses?
+### In-progress responses (the open question in the brief)
 
-**When version 2 is approved while someone is half-way through version 1:**
-they **finish on version 1**. Every response is pinned to the version it started on, and their
-link keeps showing version 1 questions. New people get version 2. The export has a **Version**
-column, so analysts can see which version each row answered.
-*Why:* switching someone to v2 half-way could ask questions their earlier answers don't fit, or
-skip questions v2 needs. Pinning keeps every response consistent.
-
-**When the survey closes while someone is half-way:**
-reopening the link shows **"This survey is closed"** with the reason (target reached, deadline
-passed, or closed by the team). Their partial answers are **kept but never counted**. They stay
-"In progress", don't count towards quotas, and are not in the export.
-*Why:* the brief says half-filled responses are never complete, and the company pays only for
-complete participation. Keeping the data still lets the team see where people stopped.
+- **Version 2 is approved while someone is half-way through version 1:** they finish on version 1.
+  New people get version 2, and the export's Version column shows which version each row answered.
+  Switching someone half-way could ask questions that don't fit their earlier answers.
+- **The survey closes while someone is half-way:** reopening the link shows "This survey is
+  closed" with the reason. Their answers are kept but never counted, because only complete
+  participation counts.
 
 ### Other decisions
 
-| Topic | What we decided | Why |
-|---|---|---|
-| **Checking the file** | A custom reader that keeps line numbers, then exact rule checks. Suggestions like "did you mean `single`?" use simple text similarity. **No AI** | The file is *almost* XML but not quite (`required` has no value, `Haldiram's` has an apostrophe), so a normal XML reader would stop at the first problem. The brief wants every problem with its line |
-| **Errors vs warnings** | Errors block approval. Warnings (e.g. a quota bigger than the target) are shown but allowed | Some odd things are intentional; real mistakes must be fixed |
-| **Drafts and versions** | Edits before approval change one draft. A version number is given **only on approval** and then frozen. Uploading a file whose `<survey id>` already exists creates a new draft of *that* survey | "A changed file creates a new version" without creating a version for every typo |
-| **Several termination reasons** | During the **screening part** (up to the last question with a termination rule or quota), failed rules are collected. When the person leaves that part, they are screened out with **all** reasons joined by `\|`. Consent "No" ends immediately | The brief asks to keep every reason. Going Back and changing an answer clears its reason |
-| **Quotas** | Only completes count. A full quota group screens out new people in that group with the reason `q3: Quota full (Male)`. The final check happens inside a database transaction, so two people can't take the last place | Matches "each quota group closes when its target is reached" |
-| **Unique links and the 3-month cool-off** | The share link `/s/<survey>` asks for a mobile number, then gives a personal token link. The same number on the same survey gets the same link back. A number that **completed** any survey in the last 90 days is told when it can join again. Screen-outs and test runs don't trigger the cool-off | The background says people can't join another survey for 3 months. A phone number is the simplest identity that works on mobile |
-| **Roles** | **Researcher**: upload, edit, preview, dashboard, export. **Admin**: also approve, go live, deadlines, close, team | Going live affects payments and data, so it needs a second pair of eyes |
-| **Deadline** | 15 days after going live by default (the company's project cycle). The admin can change it | From the background section |
-| **Closing on deadline** | Checked whenever the survey is read. No background job | Simpler, and nothing can slip through |
-| **Export format** | One row per **completed** response. Columns: Respondent ID, Version, Completed at, Quality flags, then `Q6. <full text>` columns. Multi-select: one column per option (the option name or blank). Other: `Other-Nokia`. Matrix: one column per row. Info screens: no column | Exactly the brief's table, plus Quality flags |
-| **Export across versions** | Headers use the newest wording. A column that one version didn't have stays blank | Same question id = same question |
-| **Other (specify) in options-from** | The typed text becomes the option ("Nokia", not "Other (specify)") | The brief says the typed text is used everywhere |
-| **Test runs** | Stored like responses but flagged `is_test`. Never in counts, quotas or exports. Saving a new draft deletes its old test runs | "Test answers are kept apart and never counted" |
-| **Times** | Stored in UTC. Shown in the viewer's local time on screen. The export's "Completed at" is in UTC | One clear rule for every survey |
+- **Checking the file:** the file looks like XML but isn't quite, so I wrote my own parser that
+  keeps line numbers and reports every problem, not just the first. Errors block approval;
+  warnings don't.
+- **Versions:** edits before approval change one draft. The version number is given only on
+  approval. A file with an existing `<survey id>` becomes a new draft of that survey.
+- **Several termination reasons:** reasons are collected through the screening questions, then
+  saved together, joined with `|`.
+- **Quotas:** only completes count. A full quota group screens out new people in that group.
+- **Unique links and cool-off:** people join with their mobile number and get a personal link back;
+  the same number always gets the same link. A number that completed any survey in the last 90 days
+  must wait.
+- **Roles:** researchers prepare and test; only admins approve, go live and close.
+- **Deadline:** 15 days after going live by default (the company's project cycle). The admin can
+  change it.
+- **Export:** completed responses only. Headers use the newest question wording, and times are in UTC.
 
 ---
 
 ## 9. Known Issues and Next Steps
 
-**Known limits (honest list)**
-- **Phone numbers are not verified.** Anyone can type any number, so the cool-off rule trusts the
-  number given. Next step: a one-time SMS code.
-- **Runs on one computer.** The phone link works on the same Wi-Fi. A real launch needs hosting
-  with HTTPS, a strong `SECRET_KEY` setting and PostgreSQL instead of SQLite. Only the database
-  setting changes; the code stays the same.
-- **Team members can be added but not edited or switched off from the screen.** The database
-  already supports switching an account off (`is_active`).
-- **Quality flag thresholds are fixed in code** (2 seconds per question, a third of the median).
-  They should become settings per survey.
-- **The drop-off report** counts people who are still in progress. It doesn't yet show a full
-  question-by-question funnel.
-
-**What we would build next, in order**
-1. **Payments for completes and referral rewards** (from the background: the company pays only for
-   complete participation and pays for referrals). The data is ready for this: every completed
-   response has a respondent and a time.
-2. Respondent profile and status page, so people stop calling the team about payments and survey status.
-3. Nested quotas, shuffled matrix rows, balanced AB/BA rotation, and a second language.
-4. One-time SMS codes, hosting, and PostgreSQL.
+- **Phone numbers are not verified.** A one-time SMS code would fix this.
+- **It runs locally.** A real launch needs hosting with HTTPS, a strong secret key and PostgreSQL
+  (only a setting changes).
+- **Team members can be added but not edited or switched off** from the screen yet.
+- **Next to build:** payments for completes and referral rewards, a respondent status page, and
+  the remaining bonus ideas (nested quotas, shuffled matrix rows, AB/BA rotation, a second language).
