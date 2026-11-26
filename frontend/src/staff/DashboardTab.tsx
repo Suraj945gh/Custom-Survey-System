@@ -149,7 +149,7 @@ export function DashboardTab({ survey, onShare }: { survey: SurveyDetail; onShar
           <h2 className="flex items-center gap-2 font-semibold text-slate-900"><Flag className="size-4 text-amber-500" /> Quality flags</h2>
           <p className="text-xs text-slate-500">
             Speeder: under 2 seconds per question, or under a third of the typical time. Straight-lining: the same answer on every matrix row.
-            Flags never remove a response; they are also in the export.
+            The time shown is how long that person took from joining to finishing. Flags never remove a response; they are also in the export.
           </p>
           {data.quality.checked === 0 ? <p className="mt-3 text-sm text-slate-500">Flags appear once people complete the survey.</p> : (
             <>
@@ -165,7 +165,7 @@ export function DashboardTab({ survey, onShare }: { survey: SurveyDetail; onShar
                       <span className="font-medium text-slate-700">Respondent {f.respondent_id}</span>
                       <span className="flex flex-wrap items-center gap-2">
                         {f.flags.map((flag) => <Badge key={flag} tone="amber">{flag}</Badge>)}
-                        <span className="text-xs tabular-nums text-slate-500">{duration(f.seconds)}</span>
+                        <span className="text-xs tabular-nums text-slate-500" title="Time from joining to finishing">took {duration(f.seconds)}</span>
                       </span>
                     </li>
                   ))}
